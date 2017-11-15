@@ -1,4 +1,4 @@
-from PyQt5.QtCore import (QThread,pyqtSignal)
+﻿from PyQt5.QtCore import (QThread,pyqtSignal)
 
 from rekall import constants
 from rekall import session
@@ -36,6 +36,7 @@ class RekallThread(QThread):
         if self.EnablePslist:
             self.pslist()
 
+        self.rekallEndSig.emit()
 
     def pslist(self):
         self.pslistSig.emit("pslistRuning",dict())
