@@ -11,8 +11,6 @@ class RekallThread(QThread):
 
     def __init__(self,parent=None):
         super(RekallThread,self).__init__(parent)
-       
-
         
     def Init(self,image_file_name=None):
         profiles_path = os.path.abspath(os.curdir)+"\\profile"
@@ -35,13 +33,18 @@ class RekallThread(QThread):
     def run(self):
         if self.EnablePslist:
             self.pslist()
-
+        
+        if self.isInterruptionRequested():
+            self.rekallEndSig.emit()
+            return
         self.rekallEndSig.emit()
 
     def pslist(self):
         self.pslistSig.emit("pslistRuning",dict())
         try:
             for row in self.s.plugins.pslist().collect():
+                if self.isInterruptionRequested():
+                    return
                 self.pslistSig.emit("pslistRuning",row)
         except:
             self.pslistSig.emit("pslistEnd",dict())
