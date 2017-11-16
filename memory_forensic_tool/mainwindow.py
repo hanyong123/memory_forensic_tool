@@ -3,17 +3,16 @@ from PyQt5 import (QtWidgets,QtGui)
 
 from main_widget import Ui_mainWidget
 
-from PyQt5.QtCore import  (Qt,QTimer,pyqtSignal)
+from PyQt5.QtCore import  (Qt,QTimer,pyqtSignal,QVariant)
 from PyQt5.QtGui import QCursor
 from PyQt5.QtWidgets import (QMenu,QFileDialog,QTreeWidgetItem)
 
 from work_thread import RekallThread
-#from checkboxhead import CheckBoxHeader
+from checkboxhead import (CheckBoxHeader,CTreeWidgetItemEx)
 
 
 class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
 
-    
     def __init__(self, app=None,parent=None):
         super(MainWindow, self).__init__(parent)
 
@@ -69,6 +68,11 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
 
         self.rekall_thread = RekallThread()
 
+        self.pslistWidgetHead = CheckBoxHeader()
+        self.pslistWidgetHead.stateChanged.connect(self.pslist_headCheckClicked)
+        self.pslistWidget.setHeader(self.pslistWidgetHead)
+        
+        
         self.pslistWidget.headerItem().setText(0,"序号")
         self.pslistWidget.headerItem().setText(1,"进程名称")
         self.pslistWidget.headerItem().setText(2,"进程ID")
@@ -79,7 +83,9 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
         self.pslistWidget.headerItem().setText(7,"wow64")
         self.pslistWidget.headerItem().setText(8,"创建时间")
         self.pslistWidget.headerItem().setText(9,"退出时间")
-        
+        self.pslistWidget.itemClicked.connect(self.pslist_ItemClicked)
+        self.pslistWidget.setSortingEnabled(True)
+        #self.pslistWidget.sortByColumn(4,Qt.AscendingOrder)
         self.stopButton.clicked.connect(self.stopParse)
         self.isStop = False
 
@@ -88,7 +94,31 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
 
         self.returnButton.clicked.connect(self.returnHomePage)
 
+        #self.stackedWidget.setCurrentIndex(2)
     
+    def pslist_ItemClicked(self,item,column):
+        if column == 0:
+            nCount = self.pslistWidget.topLevelItemCount()
+            nCheckedCount = 0
+            state = Qt.Unchecked
+            for i in range(0,nCount):
+                item = self.pslistWidget.topLevelItem(i)
+                if item.checkState(0) == Qt.Checked:
+                    nCheckedCount = nCheckedCount + 1
+
+            if nCheckedCount >= nCount:
+                state = Qt.Checked
+            elif nCheckedCount > 0:
+                state = Qt.PartiallyChecked
+
+            self.pslistWidgetHead.onStateChanged(state)
+
+    def pslist_headCheckClicked(self,state):
+        nCount = self.pslistWidget.topLevelItemCount()
+        for i in range(0,nCount):
+            item = self.pslistWidget.topLevelItem(i)
+            item.setCheckState(0,state)
+
     def returnHomePage(self):
          self.stackedWidget.setCurrentIndex(0)
 
@@ -104,10 +134,16 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
                 self.pslistResultCount = self.pslistResultCount + 1;
                 text = "共{0}项结果".format(self.pslistResultCount)
                 self.pslistItem.setText(1,text)
-                item = QTreeWidgetItem(self.pslistWidget)
+                #item = QTreeWidgetItem(self.pslistWidget)
+                item = CTreeWidgetItemEx(self.pslistWidget)
+                
                 item.setText(0,"{0}".format(self.pslistResultCount))
+                
                 item.setText(1,str(result["_EPROCESS"].name))
+
+                #item.setData(2,Qt.DisplayRole,QVariant(result["_EPROCESS"].pid))
                 item.setText(2,"{0}".format(result["_EPROCESS"].pid))
+
                 item.setText(3,"{0}".format(result["ppid"]))
                 item.setText(4,"{0}".format(result["thread_count"]))
                 item.setText(5,"{0}".format(result["handle_count"]))
@@ -115,7 +151,7 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
                 item.setText(7,"{0}".format(result["wow64"]))
                 item.setText(8,str(result["process_create_time"]))
                 item.setText(9,str(result["process_exit_time"]))
-
+               
                 item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable )
                 item.setCheckState(0,Qt.Unchecked)
                 self.pslistWidget.addTopLevelItem(item)
