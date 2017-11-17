@@ -8,6 +8,7 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+
 class Ui_mainWidget(object):
     def setupUi(self, mainWidget):
         mainWidget.setObjectName("mainWidget")
@@ -480,7 +481,7 @@ class Ui_mainWidget(object):
         self.treeWidget_2 = QtWidgets.QTreeWidget(self.svc)
         self.treeWidget_2.setGeometry(QtCore.QRect(0, 0, 900, 398))
         self.treeWidget_2.setRootIsDecorated(False)
-        self.treeWidget_2.setColumnCount(8)
+        self.treeWidget_2.setColumnCount(7)
         self.treeWidget_2.setObjectName("treeWidget_2")
         self.treeWidget_2.headerItem().setText(0, "1")
         self.treeWidget_2.headerItem().setText(1, "2")
@@ -489,8 +490,8 @@ class Ui_mainWidget(object):
         self.treeWidget_2.headerItem().setText(4, "5")
         self.treeWidget_2.headerItem().setText(5, "6")
         self.treeWidget_2.headerItem().setText(6, "7")
-        self.treeWidget_2.headerItem().setText(7, "8")
-        self.treeWidget_2.header().setDefaultSectionSize(85)
+        #self.treeWidget_2.headerItem().setText(7, "8")
+        self.treeWidget_2.header().setDefaultSectionSize(100)
         self.tabWidget.addTab(self.svc, "")
         self.file = QtWidgets.QWidget()
         self.file.setObjectName("file")
