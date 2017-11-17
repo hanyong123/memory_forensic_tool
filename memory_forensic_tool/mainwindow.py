@@ -1,5 +1,4 @@
-﻿# -*- coding: utf-8 -*-
-from PyQt5 import (QtWidgets,QtGui)
+﻿from PyQt5 import (QtWidgets,QtGui)
 
 from main_widget import Ui_mainWidget
 
@@ -70,6 +69,7 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
 
         self.pslistWidgetHead = CheckBoxHeader()
         self.pslistWidgetHead.stateChanged.connect(self.pslist_headCheckClicked)
+        self.pslistWidgetHead.sortSig.connect(self.pslist_sortAfter)
         self.pslistWidget.setHeader(self.pslistWidgetHead)
         
         
@@ -85,7 +85,8 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
         self.pslistWidget.headerItem().setText(9,"退出时间")
         self.pslistWidget.itemClicked.connect(self.pslist_ItemClicked)
         self.pslistWidget.setSortingEnabled(True)
-        #self.pslistWidget.sortByColumn(4,Qt.AscendingOrder)
+        self.pslistWidget.sortByColumn(0,Qt.AscendingOrder)
+
         self.stopButton.clicked.connect(self.stopParse)
         self.isStop = False
 
@@ -94,8 +95,167 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
 
         self.returnButton.clicked.connect(self.returnHomePage)
 
+        self.svcscantResultCount= 0
+
+        self.svcscanWidgetHead = CheckBoxHeader()
+        self.svcscanWidgetHead.stateChanged.connect(self.svcscan_headCheckClicked)
+        self.svcscanWidgetHead.sortSig.connect(self.svcscan_sortAfter)
+        self.treeWidget_2.setHeader(self.svcscanWidgetHead)
+        
+        self.treeWidget_2.headerItem().setText(0,"序号")
+        self.treeWidget_2.headerItem().setText(1,"服务名称")
+        self.treeWidget_2.headerItem().setText(2,"进程ID")
+        self.treeWidget_2.headerItem().setText(3,"服务描述")
+        self.treeWidget_2.headerItem().setText(4,"服务类型")
+        self.treeWidget_2.headerItem().setText(5,"服务状态")
+        self.treeWidget_2.headerItem().setText(6,"启动路径")
+        self.treeWidget_2.itemClicked.connect(self.svcscan_ItemClicked)
+        self.treeWidget_2.setSortingEnabled(True)
+        self.treeWidget_2.sortByColumn(0,Qt.AscendingOrder)
+
+        self.filescanResultCount = 0
+        self.filescanWidgetHead = CheckBoxHeader()
+        self.filescanWidgetHead.stateChanged.connect(self.filescan_headCheckClicked)
+        self.filescanWidgetHead.sortSig.connect(self.filescan_sortAfter)
+        self.treeWidget_3.setHeader(self.filescanWidgetHead)
+
+        self.treeWidget_3.headerItem().setText(0,"序号")
+        self.treeWidget_3.headerItem().setText(1,"文件名称")
+        self.treeWidget_3.headerItem().setText(2,"指针数")
+        self.treeWidget_3.headerItem().setText(3,"句柄数")
+        self.treeWidget_3.headerItem().setText(4,"读写权限")
+        self.treeWidget_3.itemClicked.connect(self.filescan_ItemClicked)
+        self.treeWidget_3.setSortingEnabled(True)
+        self.treeWidget_3.sortByColumn(0,Qt.AscendingOrder)
+
         #self.stackedWidget.setCurrentIndex(2)
     
+    def filescan_ItemClicked(self,item,column):
+        if column == 0:
+            nCount = self.treeWidget_3.topLevelItemCount()
+            nCheckedCount = 0
+            state = Qt.Unchecked
+            for i in range(0,nCount):
+                item = self.treeWidget_3.topLevelItem(i)
+                if item.checkState(0) == Qt.Checked:
+                    nCheckedCount = nCheckedCount + 1
+
+            if nCheckedCount >= nCount:
+                state = Qt.Checked
+            elif nCheckedCount > 0:
+                state = Qt.PartiallyChecked
+
+            self.filescanWidgetHead.onStateChanged(state)
+
+    def filescan_sortAfter(self):
+        nCount = self.treeWidget_3.topLevelItemCount()
+        for i in range(0,nCount):
+            item = self.treeWidget_3.topLevelItem(i)
+            oldIndex = int(item.text(0))
+            index = self.treeWidget_3.indexOfTopLevelItem(item)
+            if oldIndex != index:
+                item.setText(0,"{0}".format(index))
+
+    def filescan_headCheckClicked(self,state):
+        nCount = self.treeWidget_3.topLevelItemCount()
+        for i in range(0,nCount):
+            item = self.treeWidget_3.topLevelItem(i)
+            item.setCheckState(0,state)
+
+    def svcscan_sortAfter(self):
+        nCount = self.treeWidget_2.topLevelItemCount()
+        for i in range(0,nCount):
+            item = self.treeWidget_2.topLevelItem(i)
+            oldIndex = int(item.text(0))
+            index = self.treeWidget_2.indexOfTopLevelItem(item)
+            if oldIndex != index:
+                item.setText(0,"{0}".format(index))
+
+    def svcscan_headCheckClicked(self,state):
+        nCount = self.treeWidget_2.topLevelItemCount()
+        for i in range(0,nCount):
+            item = self.treeWidget_2.topLevelItem(i)
+            item.setCheckState(0,state)
+    
+    def svcscan_ItemClicked(self,item,column):
+        if column == 0:
+            nCount = self.treeWidget_2.topLevelItemCount()
+            nCheckedCount = 0
+            state = Qt.Unchecked
+            for i in range(0,nCount):
+                item = self.treeWidget_2.topLevelItem(i)
+                if item.checkState(0) == Qt.Checked:
+                    nCheckedCount = nCheckedCount + 1
+
+            if nCheckedCount >= nCount:
+                state = Qt.Checked
+            elif nCheckedCount > 0:
+                state = Qt.PartiallyChecked
+
+            self.svcscanWidgetHead.onStateChanged(state)
+    
+    def filescanParse(self,status,result):
+        if status == "filescanRuning":
+            self.fileItem.setText(2,'解析中...')
+            if result != {}:
+                self.filescanResultCount = self.filescanResultCount + 1
+                text = "共{0}项结果".format(self.filescanResultCount)
+                self.fileItem.setText(1,text)
+
+                item = CTreeWidgetItemEx(self.treeWidget_3)
+                item.setText(0,"{0}".format(self.filescanResultCount))
+                item.setText(1,result["path"])
+                
+                item.setText(2,str(int(result["ptr_no"])))
+                item.setText(3,str(int(result["hnd_no"])))
+              
+                item.setText(4,result["access"])
+
+                item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable )
+                item.setCheckState(0,Qt.Unchecked)
+                self.treeWidget_3.addTopLevelItem(item)
+        if status == "filescanEnd":
+            self.completeProgressCount = self.completeProgressCount + 1
+            value =(100/ self.progressBarCount)*self.completeProgressCount
+            self.progressBar.setProperty("value", value)
+            self.fileItem.setText(2,'解析成功')
+
+    def svcscanParse(self,status,result):
+        if status == "svcscanRuning":
+            self.svclistItem.setText(2,'解析中...')
+            if result != {}:
+                self.svcscantResultCount = self.svcscantResultCount + 1
+                text = "共{0}项结果".format(self.pslistResultCount)
+                self.svclistItem.setText(1,text)
+
+                item = CTreeWidgetItemEx(self.treeWidget_2)
+                item.setText(0,"{0}".format(self.svcscantResultCount))
+                item.setText(1,result["ServiceName"])
+                item.setText(2,"{0}".format(result["Pid"]))
+                item.setText(3,result["DisplayName"])
+                item.setText(4,result["Type"])
+                item.setText(5,result["State"])
+                item.setText(6,result["Binary"])
+
+                item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable )
+                item.setCheckState(0,Qt.Unchecked)
+                self.treeWidget_2.addTopLevelItem(item)
+
+        if status == "svcscanEnd":
+            self.completeProgressCount = self.completeProgressCount + 1
+            value =(100/ self.progressBarCount)*self.completeProgressCount
+            self.progressBar.setProperty("value", value)
+            self.svclistItem.setText(2,'解析成功')
+
+    def pslist_sortAfter(self):
+        nCount = self.pslistWidget.topLevelItemCount()
+        for i in range(0,nCount):
+            item = self.pslistWidget.topLevelItem(i)
+            oldIndex = int(item.text(0))
+            index = self.pslistWidget.indexOfTopLevelItem(item)
+            if oldIndex != index:
+                item.setText(0,"{0}".format(index))
+
     def pslist_ItemClicked(self,item,column):
         if column == 0:
             nCount = self.pslistWidget.topLevelItemCount()
@@ -136,21 +296,16 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
                 self.pslistItem.setText(1,text)
                 #item = QTreeWidgetItem(self.pslistWidget)
                 item = CTreeWidgetItemEx(self.pslistWidget)
-                
                 item.setText(0,"{0}".format(self.pslistResultCount))
-                
-                item.setText(1,str(result["_EPROCESS"].name))
-
-                #item.setData(2,Qt.DisplayRole,QVariant(result["_EPROCESS"].pid))
-                item.setText(2,"{0}".format(result["_EPROCESS"].pid))
-
+                item.setText(1,result["process_name"])
+                item.setText(2,"{0}".format(result["process_id"]))
                 item.setText(3,"{0}".format(result["ppid"]))
                 item.setText(4,"{0}".format(result["thread_count"]))
                 item.setText(5,"{0}".format(result["handle_count"]))
                 item.setText(6,"{0}".format(result["session_id"]))
                 item.setText(7,"{0}".format(result["wow64"]))
-                item.setText(8,str(result["process_create_time"]))
-                item.setText(9,str(result["process_exit_time"]))
+                item.setText(8,result["process_create_time"])
+                item.setText(9,result["process_exit_time"])
                
                 item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable )
                 item.setCheckState(0,Qt.Unchecked)
@@ -166,7 +321,7 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
         self.timer.stop()
         self.stackedWidget.setCurrentIndex(2)
        
-        total = self.pslistResultCount
+        total = self.pslistResultCount + self.svcscantResultCount + self.filescanResultCount
         text = ""
         pix = None
         if self.isStop == False:
@@ -200,20 +355,29 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
                 self.rekall_thread.enablePslist();
                 self.rekall_thread.pslistSig.connect(self.pslistParse)
                 self.progressBarCount = self.progressBarCount + 1
+
             if self.bsvcscan:
                 self.svclistItem = QTreeWidgetItem(self.treeWidget)
                 self.svclistItem.setText(0,'加载服务信息')
                 self.svclistItem.setText(1,'共0项结果')
                 self.svclistItem.setText(2,'等待解析...')
                 self.treeWidget.addTopLevelItem(self.svclistItem)
+                
+                self.rekall_thread.enableSvcScan()
+                self.rekall_thread.svcSig.connect(self.svcscanParse)
                 self.progressBarCount = self.progressBarCount + 1
+
             if self.bfilescan:
                 self.fileItem = QTreeWidgetItem(self.treeWidget)
                 self.fileItem.setText(0,'已打开文件信息')
                 self.fileItem.setText(1,'共0项结果')
                 self.fileItem.setText(2,'等待解析...')
                 self.treeWidget.addTopLevelItem(self.fileItem)
+
+                self.rekall_thread.enableFileScan()
+                self.rekall_thread.filescanSig.connect(self.filescanParse)
                 self.progressBarCount = self.progressBarCount + 1
+
             if self.bdlllist:
                 self.dlllistItem = QTreeWidgetItem(self.treeWidget)
                 self.dlllistItem.setText(0,'动态链接库信息')

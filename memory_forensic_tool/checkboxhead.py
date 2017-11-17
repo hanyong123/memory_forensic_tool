@@ -5,6 +5,7 @@ from PyQt5.QtGui import QMouseEvent
 class CheckBoxHeader(QHeaderView):
 
     stateChanged = pyqtSignal(int)
+    sortSig = pyqtSignal()
     def __init__(self,orientation=Qt.Horizontal,parent = None):
         super(CheckBoxHeader,self).__init__(orientation,parent)
 
@@ -82,6 +83,7 @@ class CheckBoxHeader(QHeaderView):
              self.stateChanged.emit(state)
          else:
              super(CheckBoxHeader,self).mouseReleaseEvent(event)
+             self.sortSig.emit()
 
          self.m_bPressed = False
 
@@ -117,9 +119,7 @@ class CTreeWidgetItemEx(QTreeWidgetItem):
             return cmp(self.text(column),y.text(column))
     
      
-   
-
-
+  
 
 
 
