@@ -2,8 +2,8 @@
 
 from main_widget import Ui_mainWidget
 
-from PyQt5.QtCore import  (Qt,QTimer,pyqtSignal,QVariant)
-from PyQt5.QtGui import QCursor
+from PyQt5.QtCore import  (Qt,QTimer,pyqtSignal,QVariant,QPointF)
+from PyQt5.QtGui import (QCursor,QPainter)
 from PyQt5.QtWidgets import (QMenu,QFileDialog,QTreeWidgetItem)
 
 from work_thread import RekallThread
@@ -63,16 +63,25 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
         self.Image_filename = None
         self.selectImageButton.clicked.connect(self.showFileDialog)
         self.runButton.clicked.connect(self.startRun)
-        self.pslistResultCount= 0
-
+        
         self.rekall_thread = RekallThread()
+        self.rekall_thread.rekallEndSig.connect(self.parseComplete)
+        self.rekall_thread.pslistSig.connect(self.pslistParse)
+        self.rekall_thread.svcSig.connect(self.svcscanParse)
+        self.rekall_thread.filescanSig.connect(self.filescanParse)
+        self.rekall_thread.dlllistSig.connect(self.dlllistParse)
+        self.rekall_thread.netscanSig.connect(self.netscanParse)
+        self.rekall_thread.devscanSig.connect(self.devscanParse)
+        self.rekall_thread.driverscanSig.connect(self.driverscanParse)
+        self.rekall_thread.socketsSig.connect(self.socketsParse)
+        self.rekall_thread.tcSig.connect(self.tcscanParse)
+        self.rekall_thread.bitlockerSig.connect(self.bitlockerParse)
 
+        self.pslistResultCount= 0
         self.pslistWidgetHead = CheckBoxHeader()
         self.pslistWidgetHead.stateChanged.connect(self.pslist_headCheckClicked)
         self.pslistWidgetHead.sortSig.connect(self.pslist_sortAfter)
         self.pslistWidget.setHeader(self.pslistWidgetHead)
-        
-        
         self.pslistWidget.headerItem().setText(0,"序号")
         self.pslistWidget.headerItem().setText(1,"进程名称")
         self.pslistWidget.headerItem().setText(2,"进程ID")
@@ -128,8 +137,255 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
         self.treeWidget_3.setSortingEnabled(True)
         self.treeWidget_3.sortByColumn(0,Qt.AscendingOrder)
 
+        self.dlllistResultCount = 0
+        self.treeWidget_4.headerItem().setText(0,"[进程ID]进程名称")
+
+        self.netscanResultCount = 0
+        self.netscanWidgetHead = CheckBoxHeader()
+        self.netscanWidgetHead.stateChanged.connect(self.netscan_headCheckClicked)
+        self.netscanWidgetHead.sortSig.connect(self.netscan_sortAfter)
+        self.treeWidget_5.setHeader(self.netscanWidgetHead)
+
+        self.treeWidget_5.headerItem().setText(0,"序号")
+        self.treeWidget_5.headerItem().setText(1,"进程ID")
+        self.treeWidget_5.headerItem().setText(2,"本地IP地址")
+        self.treeWidget_5.headerItem().setText(3,"远程IP地址")
+        self.treeWidget_5.itemClicked.connect(self.netscan_ItemClicked)
+        self.treeWidget_5.setSortingEnabled(True)
+        self.treeWidget_5.sortByColumn(0,Qt.AscendingOrder)
+
+        self.devscanResultCount = 0
+        self.treeWidget_6.headerItem().setText(0,"名称")
+        self.treeWidget_6.headerItem().setText(1,"类型")
+
+        self.driverscanResultCount = 0
+        self.driverscanWidgetHead = CheckBoxHeader()
+        self.driverscanWidgetHead.stateChanged.connect(self.driverscan_headCheckClicked)
+        self.driverscanWidgetHead.sortSig.connect(self.driverscan_sortAfter)
+        self.treeWidget_7.setHeader(self.driverscanWidgetHead)
+
+        self.treeWidget_7.headerItem().setText(0,"序号")
+        self.treeWidget_7.headerItem().setText(1,"显示名称")
+        self.treeWidget_7.headerItem().setText(2,"服务名称")
+        self.treeWidget_7.headerItem().setText(3,"驱动名称")
+        self.treeWidget_7.headerItem().setText(4,"驱动大小")
+        self.treeWidget_7.headerItem().setText(5,"指针数")
+        self.treeWidget_7.headerItem().setText(6,"句柄数")
+        self.treeWidget_7.itemClicked.connect(self.driverscan_ItemClicked)
+        self.treeWidget_7.setSortingEnabled(True)
+        self.treeWidget_7.sortByColumn(0,Qt.AscendingOrder)
+
+        self.socketsResultCount = 0
+        self.socketsWidgetHead = CheckBoxHeader()
+        self.socketsWidgetHead.stateChanged.connect(self.sockets_headCheckClicked)
+        self.socketsWidgetHead.sortSig.connect(self.sockets_sortAfter)
+        self.treeWidget_8.setHeader(self.socketsWidgetHead)
+
+        self.treeWidget_8.headerItem().setText(0,"序号")
+        self.treeWidget_8.headerItem().setText(1,"进程ID")
+        self.treeWidget_8.headerItem().setText(2,"IP地址")
+        self.treeWidget_8.headerItem().setText(3,"端口号")
+        self.treeWidget_8.headerItem().setText(4,"协议号")
+        self.treeWidget_8.headerItem().setText(5,"协议名称")
+        self.treeWidget_8.headerItem().setText(6,"创建时间")
+        self.treeWidget_8.itemClicked.connect(self.sockets_ItemClicked)
+        self.treeWidget_8.setSortingEnabled(True)
+        self.treeWidget_8.sortByColumn(0,Qt.AscendingOrder)
+
+        self.tcscanResultCount = 0
+        self.tcscanWidgetHead = CheckBoxHeader()
+        self.tcscanWidgetHead.stateChanged.connect(self.tcscan_headCheckClicked)
+        self.tcscanWidgetHead.sortSig.connect(self.tcscan_sortAfter)
+        self.treeWidget_9.setColumnCount(5)
+        self.treeWidget_9.setHeader(self.tcscanWidgetHead)
+
+        self.treeWidget_9.headerItem().setText(0,"序号")
+        self.treeWidget_9.headerItem().setText(1,"卷名称")
+        self.treeWidget_9.headerItem().setText(2,"加密算法")
+        self.treeWidget_9.headerItem().setText(3,"加密模式")
+        self.treeWidget_9.headerItem().setText(4,"密钥文件")
+        self.treeWidget_9.itemClicked.connect(self.tcscan_ItemClicked)
+        self.treeWidget_9.setSortingEnabled(True)
+        self.treeWidget_9.sortByColumn(0,Qt.AscendingOrder)
+
+        self.bitlockerResultCount = 0
+        self.bitlockerWidgetHead = CheckBoxHeader()
+        self.bitlockerWidgetHead.stateChanged.connect(self.bitlocker_headCheckClicked)
+        self.tcscanWidgetHead.sortSig.connect(self.bitlocker_sortAfter)
+        self.treeWidget_10.setColumnCount(3)
+        self.treeWidget_10.setHeader(self.bitlockerWidgetHead)
+
+        self.treeWidget_10.headerItem().setText(0,"序号")
+        self.treeWidget_10.headerItem().setText(1,"加密算法")
+        self.treeWidget_10.headerItem().setText(2,"密钥文件")
+        self.treeWidget_10.itemClicked.connect(self.bitlocker_ItemClicked)
+        self.treeWidget_10.setSortingEnabled(True)
+        self.treeWidget_10.sortByColumn(0,Qt.AscendingOrder)
         #self.stackedWidget.setCurrentIndex(2)
     
+    def bitlocker_headCheckClicked(self,state):
+        nCount = self.treeWidget_10.topLevelItemCount()
+        for i in range(0,nCount):
+            item = self.treeWidget_10.topLevelItem(i)
+            item.setCheckState(0,state)
+
+    def bitlocker_sortAfter(self):
+        nCount = self.treeWidget_10.topLevelItemCount()
+        for i in range(0,nCount):
+            item = self.treeWidget_10.topLevelItem(i)
+            oldIndex = int(item.text(0))
+            index = self.treeWidget_10.indexOfTopLevelItem(item)
+            if oldIndex != index:
+                item.setText(0,"{0}".format(index))
+
+    def bitlocker_ItemClicked(self,item,column):
+        if column == 0:
+            nCount = self.treeWidget_10.topLevelItemCount()
+            nCheckedCount = 0
+            state = Qt.Unchecked
+            for i in range(0,nCount):
+                item = self.treeWidget_10.topLevelItem(i)
+                if item.checkState(0) == Qt.Checked:
+                    nCheckedCount = nCheckedCount + 1
+
+            if nCheckedCount >= nCount:
+                state = Qt.Checked
+            elif nCheckedCount > 0:
+                state = Qt.PartiallyChecked
+
+            self.bitlockerWidgetHead.onStateChanged(state)
+
+
+    def tcscan_headCheckClicked(self,state):
+        nCount = self.treeWidget_9.topLevelItemCount()
+        for i in range(0,nCount):
+            item = self.treeWidget_9.topLevelItem(i)
+            item.setCheckState(0,state)
+    
+    def tcscan_sortAfter(self):
+        nCount = self.treeWidget_9.topLevelItemCount()
+        for i in range(0,nCount):
+            item = self.treeWidget_9.topLevelItem(i)
+            oldIndex = int(item.text(0))
+            index = self.treeWidget_9.indexOfTopLevelItem(item)
+            if oldIndex != index:
+                item.setText(0,"{0}".format(index))
+
+    def tcscan_ItemClicked(self,item,column):
+        if column == 0:
+            nCount = self.treeWidget_9.topLevelItemCount()
+            nCheckedCount = 0
+            state = Qt.Unchecked
+            for i in range(0,nCount):
+                item = self.treeWidget_9.topLevelItem(i)
+                if item.checkState(0) == Qt.Checked:
+                    nCheckedCount = nCheckedCount + 1
+
+            if nCheckedCount >= nCount:
+                state = Qt.Checked
+            elif nCheckedCount > 0:
+                state = Qt.PartiallyChecked
+
+            self.tcscanWidgetHead.onStateChanged(state)
+
+    def sockets_headCheckClicked(self,state):
+        nCount = self.treeWidget_8.topLevelItemCount()
+        for i in range(0,nCount):
+            item = self.treeWidget_8.topLevelItem(i)
+            item.setCheckState(0,state)
+     
+    def sockets_sortAfter(self):
+        nCount = self.treeWidget_8.topLevelItemCount()
+        for i in range(0,nCount):
+            item = self.treeWidget_8.topLevelItem(i)
+            oldIndex = int(item.text(0))
+            index = self.treeWidget_8.indexOfTopLevelItem(item)
+            if oldIndex != index:
+                item.setText(0,"{0}".format(index))
+
+    def sockets_ItemClicked(self,item,column):
+        if column == 0:
+            nCount = self.treeWidget_8.topLevelItemCount()
+            nCheckedCount = 0
+            state = Qt.Unchecked
+            for i in range(0,nCount):
+                item = self.treeWidget_8.topLevelItem(i)
+                if item.checkState(0) == Qt.Checked:
+                    nCheckedCount = nCheckedCount + 1
+
+            if nCheckedCount >= nCount:
+                state = Qt.Checked
+            elif nCheckedCount > 0:
+                state = Qt.PartiallyChecked
+
+            self.socketsWidgetHead.onStateChanged(state)
+
+    def driverscan_headCheckClicked(self,state):
+        nCount = self.treeWidget_7.topLevelItemCount()
+        for i in range(0,nCount):
+            item = self.treeWidget_7.topLevelItem(i)
+            item.setCheckState(0,state)
+    
+    def driverscan_sortAfter(self):
+        nCount = self.treeWidget_7.topLevelItemCount()
+        for i in range(0,nCount):
+            item = self.treeWidget_7.topLevelItem(i)
+            oldIndex = int(item.text(0))
+            index = self.treeWidget_7.indexOfTopLevelItem(item)
+            if oldIndex != index:
+                item.setText(0,"{0}".format(index))
+
+    def driverscan_ItemClicked(self,item,column):
+        if column == 0:
+            nCount = self.treeWidget_7.topLevelItemCount()
+            nCheckedCount = 0
+            state = Qt.Unchecked
+            for i in range(0,nCount):
+                item = self.treeWidget_7.topLevelItem(i)
+                if item.checkState(0) == Qt.Checked:
+                    nCheckedCount = nCheckedCount + 1
+
+            if nCheckedCount >= nCount:
+                state = Qt.Checked
+            elif nCheckedCount > 0:
+                state = Qt.PartiallyChecked
+
+            self.driverscanWidgetHead.onStateChanged(state)
+
+
+    def netscan_headCheckClicked(self,state):
+        nCount = self.treeWidget_5.topLevelItemCount()
+        for i in range(0,nCount):
+            item = self.treeWidget_5.topLevelItem(i)
+            item.setCheckState(0,state)
+
+    def netscan_sortAfter(self):
+        nCount = self.treeWidget_5.topLevelItemCount()
+        for i in range(0,nCount):
+            item = self.treeWidget_5.topLevelItem(i)
+            oldIndex = int(item.text(0))
+            index = self.treeWidget_5.indexOfTopLevelItem(item)
+            if oldIndex != index:
+                item.setText(0,"{0}".format(index))
+
+    def netscan_ItemClicked(self,item,column):
+        if column == 0:
+            nCount = self.treeWidget_5.topLevelItemCount()
+            nCheckedCount = 0
+            state = Qt.Unchecked
+            for i in range(0,nCount):
+                item = self.treeWidget_5.topLevelItem(i)
+                if item.checkState(0) == Qt.Checked:
+                    nCheckedCount = nCheckedCount + 1
+
+            if nCheckedCount >= nCount:
+                state = Qt.Checked
+            elif nCheckedCount > 0:
+                state = Qt.PartiallyChecked
+
+            self.netscanWidgetHead.onStateChanged(state)
+        
+
     def filescan_ItemClicked(self,item,column):
         if column == 0:
             nCount = self.treeWidget_3.topLevelItemCount()
@@ -146,7 +402,7 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
                 state = Qt.PartiallyChecked
 
             self.filescanWidgetHead.onStateChanged(state)
-
+           
     def filescan_sortAfter(self):
         nCount = self.treeWidget_3.topLevelItemCount()
         for i in range(0,nCount):
@@ -194,6 +450,154 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
 
             self.svcscanWidgetHead.onStateChanged(state)
     
+    def devscanParse(self,status,result):
+        if status == "devscanRuning":
+            self.deviceItem.setText(2,'解析中...')
+            if result != {}:
+                self.devscanResultCount = self.devscanResultCount + 1
+                text = "共{0}项结果".format(self.netscanResultCount)
+                self.deviceItem.setText(1,text)
+
+                item = QTreeWidgetItem(self.treeWidget_6)
+                item.setText(0,result["Name"])
+                item.setText(1,"驱动")
+                for dev in result["devs"]:
+                    item1 = QTreeWidgetItem(item)
+                    item1.setText(0,dev["Name"])
+                    item1.setText(1,"内置设备")
+
+                    item1.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable )
+                    item1.setCheckState(0,Qt.Unchecked)
+                    item.addChild(item1)
+
+                    for att in dev["atts"]:
+                        item2 = QTreeWidgetItem(item1)
+                        item2.setText(0,att["Name"])
+                        item2.setText(1,"外接设备")
+
+                        item2.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable )
+                        item2.setCheckState(0,Qt.Unchecked)
+                        item1.addChild(item2)
+                
+                item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable )
+                item.setCheckState(0,Qt.Unchecked)
+                self.treeWidget_6.addTopLevelItem(item)
+
+        if status == "devscanEnd":
+            self.completeProgressCount = self.completeProgressCount + 1
+            value =(100/ self.progressBarCount)*self.completeProgressCount
+            self.progressBar.setProperty("value", value)
+            self.deviceItem.setText(2,'解析成功')
+
+
+    def netscanParse(self,status,result):
+        if status == "netscanRuning":
+            self.netscanItem.setText(2,'解析中...')
+            if result != {}:
+                self.netscanResultCount = self.netscanResultCount + 1
+                text = "共{0}项结果".format(self.netscanResultCount)
+                self.netscanItem.setText(1,text)
+
+                item = CTreeWidgetItemEx(self.treeWidget_5)
+                item.setText(0,"{0}".format(self.netscanResultCount))
+                item.setText(2,result["local"])
+                item.setText(3,result["remote"])
+                item.setText(1,"{0}".format(result["pid"]))
+                item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable )
+                item.setCheckState(0,Qt.Unchecked)
+                self.treeWidget_5.addTopLevelItem(item)
+
+        if status == "netscanEnd":
+            self.completeProgressCount = self.completeProgressCount + 1
+            value =(100/ self.progressBarCount)*self.completeProgressCount
+            self.progressBar.setProperty("value", value)
+            self.netscanItem.setText(2,'解析成功')
+
+    
+    def socketsParse(self,status,result):
+        if status == "socketsRuning":
+            self.socketsItem.setText(2,'解析中...')
+            if result != {}:
+                self.socketsResultCount = self.socketsResultCount + 1
+                text = "共{0}项结果".format(self.socketsResultCount)
+                self.socketsItem.setText(1,text)
+
+                item = CTreeWidgetItemEx(self.treeWidget_8)
+                item.setText(0,"{0}".format(self.socketsResultCount))
+                item.setText(1,str(result["pid"]))
+                item.setText(2,result["address"])
+                item.setText(3,str(result["port"]))
+                item.setText(4,str(result["proto"]))
+                item.setText(5,result["protocol"])
+                item.setText(6,result["create_time"])
+
+                item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable )
+                item.setCheckState(0,Qt.Unchecked)
+                self.treeWidget_8.addTopLevelItem(item)
+
+        if status == "socketsEnd":
+            self.completeProgressCount = self.completeProgressCount + 1
+            value =(100/ self.progressBarCount)*self.completeProgressCount
+            self.progressBar.setProperty("value", value)
+            self.socketsItem.setText(2,'解析成功')
+
+    def driverscanParse(self,status,result):
+        if status == "driverscanRuning":
+            self.driverItem.setText(2,'解析中...')
+            if result != {}:
+                self.driverscanResultCount = self.driverscanResultCount + 1
+                text = "共{0}项结果".format(self.dlllistResultCount)
+                self.driverItem.setText(1,text)
+
+                item = CTreeWidgetItemEx(self.treeWidget_7)
+                item.setText(0,"{0}".format(self.driverscanResultCount))
+                item.setText(1,result["name"])
+                item.setText(2,result["servicekey"])
+                item.setText(3,result["path"])
+                item.setText(4,str(result["size"]))
+                item.setText(5,str(result["ptr_no"]))
+                item.setText(6,str(result["hnd_no"]))
+
+                item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable )
+                item.setCheckState(0,Qt.Unchecked)
+                self.treeWidget_7.addTopLevelItem(item)
+        if status == "driverscanEnd":
+            self.completeProgressCount = self.completeProgressCount + 1
+            value =(100/ self.progressBarCount)*self.completeProgressCount
+            self.progressBar.setProperty("value", value)
+            self.driverItem.setText(2,'解析成功')
+
+
+
+    def dlllistParse(self,status,result):
+        if status == "dlllistRuning":
+            self.dlllistItem.setText(2,'解析中...')
+            if result != {}:
+                self.dlllistResultCount = self.dlllistResultCount + 1
+                text = "共{0}项结果".format(self.dlllistResultCount)
+                self.dlllistItem.setText(1,text)
+
+                item = QTreeWidgetItem(self.treeWidget_4)
+                item.setText(0,"[{0}]{1}".format(result["UniqueProcessId"],result["CommandLine"]))
+
+                for dll in result["dlls"]:
+                    if dll != "":
+                        child = QTreeWidgetItem(item)
+                        child.setText(0,dll)
+                        child.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable )
+                        child.setCheckState(0,Qt.Unchecked)
+                        item.addChild(child)
+
+                item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable )
+                item.setCheckState(0,Qt.Unchecked)
+                self.treeWidget_4.addTopLevelItem(item)
+
+        if status == "filescanEnd":
+            self.completeProgressCount = self.completeProgressCount + 1
+            value =(100/ self.progressBarCount)*self.completeProgressCount
+            self.progressBar.setProperty("value", value)
+            self.dlllistItem.setText(2,'解析成功')
+
     def filescanParse(self,status,result):
         if status == "filescanRuning":
             self.fileItem.setText(2,'解析中...')
@@ -225,7 +629,7 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
             self.svclistItem.setText(2,'解析中...')
             if result != {}:
                 self.svcscantResultCount = self.svcscantResultCount + 1
-                text = "共{0}项结果".format(self.pslistResultCount)
+                text = "共{0}项结果".format(self.svcscantResultCount)
                 self.svclistItem.setText(1,text)
 
                 item = CTreeWidgetItemEx(self.treeWidget_2)
@@ -281,12 +685,61 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
 
     def returnHomePage(self):
          self.stackedWidget.setCurrentIndex(0)
+         
 
     def stopParse(self):
         self.timer.stop()
         self.rekall_thread.requestInterruption()
         self.isStop = True
-      
+    
+    def tcscanParse(self,status,result):
+        if status == "tcscanRuning":
+            self.truecryptItem.setText(2,'解析中...')
+            if result != {}:
+                self.tcscanResultCount = self.tcscanResultCount + 1
+                text = "共{0}项结果".format(self.tcscanResultCount)
+                self.truecryptItem.setText(1,text)
+
+                item = CTreeWidgetItemEx(self.treeWidget_9)
+                item.setText(0,"{0}".format(self.tcscanResultCount))
+                item.setText(1,result["Volume"])
+                item.setText(2,result["ea"])
+                item.setText(3,result["mode"])
+                item.setText(4,result["keyfile"])
+
+                item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable )
+                item.setCheckState(0,Qt.Unchecked)
+                self.treeWidget_9.addTopLevelItem(item)
+
+        elif status == "tcscanEnd":
+            self.completeProgressCount = self.completeProgressCount + 1
+            value =(100/ self.progressBarCount)*self.completeProgressCount
+            self.progressBar.setProperty("value", value)
+            self.truecryptItem.setText(2,'解析成功')
+    
+    def bitlockerParse(self,status,result):
+        if status == "bitlockerRuning":
+            self.bitlockerItem.setText(2,'解析中...')
+            if result != {}:
+                self.bitlockerResultCount = self.bitlockerResultCount + 1
+                text = "共{0}项结果".format(self.bitlockerResultCount)
+                self.bitlockerItem.setText(1,text)
+
+                item = CTreeWidgetItemEx(self.treeWidget_10)
+                item.setText(0,"{0}".format(self.bitlockerResultCount))
+                item.setText(1,result["Cipher"])
+                item.setText(2,result["keyfile"])
+
+                item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable )
+                item.setCheckState(0,Qt.Unchecked)
+                self.treeWidget_10.addTopLevelItem(item)
+
+        elif status == "bitlockerEnd":
+            self.completeProgressCount = self.completeProgressCount + 1
+            value =(100/ self.progressBarCount)*self.completeProgressCount
+            self.progressBar.setProperty("value", value)
+            self.bitlockerItem.setText(2,'解析成功')
+
     def pslistParse(self,status,result):
         if status == "pslistRuning":
             self.pslistItem.setText(2,'解析中...')
@@ -294,7 +747,7 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
                 self.pslistResultCount = self.pslistResultCount + 1;
                 text = "共{0}项结果".format(self.pslistResultCount)
                 self.pslistItem.setText(1,text)
-                #item = QTreeWidgetItem(self.pslistWidget)
+                
                 item = CTreeWidgetItemEx(self.pslistWidget)
                 item.setText(0,"{0}".format(self.pslistResultCount))
                 item.setText(1,result["process_name"])
@@ -321,7 +774,18 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
         self.timer.stop()
         self.stackedWidget.setCurrentIndex(2)
        
-        total = self.pslistResultCount + self.svcscantResultCount + self.filescanResultCount
+        total = 0 
+        total = total + self.pslistResultCount
+        total = total + self.svcscantResultCount  
+        total = total + self.filescanResultCount 
+        total = total + self.dlllistResultCount 
+        total = total + self.netscanResultCount
+        total = total + self.devscanResultCount
+        total = total + self.driverscanResultCount
+        total = total + self.socketsResultCount
+        total = total + self.tcscanResultCount
+        total = total + self.bitlockerResultCount
+
         text = ""
         pix = None
         if self.isStop == False:
@@ -336,6 +800,7 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
         self.label_10.setPixmap(pix)
 
     def startRun(self):
+        self.treeWidget.clear()
         if self.Image_filename:
             self.stackedWidget.setCurrentIndex(1)
             self.progressBar.setProperty("value", 0)
@@ -344,7 +809,6 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
             self.treeWidget.headerItem().setText(2, "解析状态")
             
             self.rekall_thread.Init(self.Image_filename)
-            self.rekall_thread.rekallEndSig.connect(self.parseComplete)
             if self.bpslistButton:
                 self.pslistItem = QTreeWidgetItem(self.treeWidget)
                 self.pslistItem.setText(0,'进程列表信息')
@@ -352,8 +816,9 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
                 self.pslistItem.setText(2,'等待解析...')
                 self.treeWidget.addTopLevelItem(self.pslistItem)
                
-                self.rekall_thread.enablePslist();
-                self.rekall_thread.pslistSig.connect(self.pslistParse)
+                self.rekall_thread.enablePslist()
+                self.pslistResultCount = 0
+                self.pslistWidget.clear()
                 self.progressBarCount = self.progressBarCount + 1
 
             if self.bsvcscan:
@@ -364,7 +829,8 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
                 self.treeWidget.addTopLevelItem(self.svclistItem)
                 
                 self.rekall_thread.enableSvcScan()
-                self.rekall_thread.svcSig.connect(self.svcscanParse)
+                self.svcscantResultCount = 0
+                self.treeWidget_2.clear()
                 self.progressBarCount = self.progressBarCount + 1
 
             if self.bfilescan:
@@ -375,7 +841,8 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
                 self.treeWidget.addTopLevelItem(self.fileItem)
 
                 self.rekall_thread.enableFileScan()
-                self.rekall_thread.filescanSig.connect(self.filescanParse)
+                self.filescanResultCount = 0
+                self.treeWidget_3.clear()
                 self.progressBarCount = self.progressBarCount + 1
 
             if self.bdlllist:
@@ -384,13 +851,22 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
                 self.dlllistItem.setText(1,'共0项结果')
                 self.dlllistItem.setText(2,'等待解析...')
                 self.treeWidget.addTopLevelItem(self.dlllistItem)
+
+                self.rekall_thread.enableDllList()
+                self.dlllistResultCount = 0
+                self.treeWidget_4.clear()
                 self.progressBarCount = self.progressBarCount + 1
+
             if self.bnetscan:
                 self.netscanItem = QTreeWidgetItem(self.treeWidget)
                 self.netscanItem.setText(0,'网络连接信息')
                 self.netscanItem.setText(1,'共0项结果')
                 self.netscanItem.setText(2,'等待解析...')
                 self.treeWidget.addTopLevelItem(self.netscanItem)
+
+                self.rekall_thread.enableNetScan()
+                self.netscanResultCount = 0
+                self.treeWidget_5.clear()
                 self.progressBarCount = self.progressBarCount + 1
             if self.bdevice:
                 self.deviceItem = QTreeWidgetItem(self.treeWidget)
@@ -398,6 +874,10 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
                 self.deviceItem.setText(1,'共0项结果')
                 self.deviceItem.setText(2,'等待解析...')
                 self.treeWidget.addTopLevelItem(self.deviceItem)
+
+                self.rekall_thread.enableDevScan()
+                self.devscanResultCount = 0
+                self.treeWidget_6.clear()
                 self.progressBarCount = self.progressBarCount + 1
             if self.bdriverscan:
                 self.driverItem = QTreeWidgetItem(self.treeWidget)
@@ -405,6 +885,10 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
                 self.driverItem.setText(1,'共0项结果')
                 self.driverItem.setText(2,'等待解析...')
                 self.treeWidget.addTopLevelItem(self.driverItem)
+
+                self.rekall_thread.enableDriverscan()
+                self.driverscanResultCount = 0
+                self.treeWidget_7.clear()
                 self.progressBarCount = self.progressBarCount + 1
             if self.bsockets:
                 self.socketsItem = QTreeWidgetItem(self.treeWidget)
@@ -412,6 +896,10 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
                 self.socketsItem.setText(1,'共0项结果')
                 self.socketsItem.setText(2,'等待解析...')
                 self.treeWidget.addTopLevelItem(self.socketsItem)
+
+                self.rekall_thread.enbaleSockets()
+                self.socketsResultCount = 0
+                self.treeWidget_8.clear()
                 self.progressBarCount = self.progressBarCount + 1
             if self.btruecrypt:
                 self.truecryptItem = QTreeWidgetItem(self.treeWidget)
@@ -419,6 +907,10 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
                 self.truecryptItem.setText(1,'共0项结果')
                 self.truecryptItem.setText(2,'等待解析...')
                 self.treeWidget.addTopLevelItem(self.truecryptItem)
+
+                self.rekall_thread.enableTc()
+                self.tcscanResultCount = 0
+                self.treeWidget_9.clear()
                 self.progressBarCount = self.progressBarCount + 1
             if self.bbitlocker:
                 self.bitlockerItem = QTreeWidgetItem(self.treeWidget)
@@ -426,6 +918,10 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
                 self.bitlockerItem.setText(1,'共0项结果')
                 self.bitlockerItem.setText(2,'等待解析...')
                 self.treeWidget.addTopLevelItem(self.bitlockerItem)
+
+                self.rekall_thread.enableBitlocker()
+                self.bitlockerResultCount = 0
+                self.treeWidget_10.clear()
                 self.progressBarCount = self.progressBarCount + 1
 
             self.rekall_thread.start()
@@ -689,3 +1185,10 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
       
     def isInTitle(self, xPos, yPos):
         return yPos < 30 and xPos < 695
+
+    def paintEvent(self, event):
+        painter2 = QPainter(self)
+        painter2.setPen(Qt.gray)
+        painter2.drawPolyline(QPointF(0, 100), QPointF(0, self.height() - 1), QPointF(self.width() - 1, self.height() - 1), QPointF(self.width() - 1, 100))
+        painter2.end()
+          
