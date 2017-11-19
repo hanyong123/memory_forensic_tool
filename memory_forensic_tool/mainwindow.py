@@ -20,6 +20,7 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
         self.createContextMenu()
 
         self.timer = QTimer(self)       #任务计算时器
+        self.timer.timeout.connect(self.updateTime)
 
         self.closeButton.clicked.connect(self.close);
         self.minButton.clicked.connect(self.showMinimized);
@@ -930,7 +931,7 @@ class MainWindow(QtWidgets.QWidget,Ui_mainWidget):
             self.minutes = 0
             self.hour = 0
 
-            self.timer.timeout.connect(self.updateTime)
+            
             self.timer.start(1000)
 
     def updateTime(self):
